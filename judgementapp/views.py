@@ -1,4 +1,5 @@
 # Create your views here.
+from collections import defaultdict
 import cStringIO as StringIO
 from django.http import HttpResponse, HttpResponseRedirect
 from django.core.urlresolvers import reverse
@@ -11,6 +12,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.conf import settings
 from judgementapp.models import *
+from django.contrib.auth.decorators import permission_required
+from django.contrib.auth.models import User
 
 
 @login_required
@@ -19,6 +22,7 @@ def index(request):
 
 
 @login_required
+@permission_required('judgementapp.can_upload_docs')
 def qrels(request):
     judgements = Judgement.objects.exclude(relevance=-1)
 
@@ -32,15 +36,20 @@ def qrels(request):
 
 @login_required
 def query_list(request):
-    queries = Query.objects.order_by('qId')
-
-    return render_to_response('judgementapp/query_list.html', {'queries': queries}, context_instance=RequestContext(request))
+    annotator = User.objects.get(username=request.user)
+    queries = Query.objects.filter(annotator=annotator).order_by('qId')
+    return render_to_response(
+        'judgementapp/query_list.html', 
+        {'queries': queries}, 
+        context_instance=RequestContext(request)
+    )
 
 
 @login_required
 def query(request, qId):
-    query = Query.objects.get(qId=qId)
-    judgements = Judgement.objects.filter(query=query.id)
+    userAnnotator=User.objects.get(username=request.user)
+    query = Query.objects.get(qId=qId, annotator=userAnnotator)
+    judgements = Judgement.objects.filter(query=query.id, annotator=userAnnotator)
 
     if "difficulty" in request.POST:
         query.difficulty = int(request.POST['difficulty'])
@@ -56,27 +65,28 @@ def query(request, qId):
 
 @login_required
 def document(request, qId, docId):
+    userAnnotator = User.objects.get(username=request.user)
     document = Document.objects.get(docId=docId)
-    query = Query.objects.get(qId=qId)
+    query = Query.objects.get(qId=qId, annotator=userAnnotator)
 
-    judgements = Judgement.objects.filter(query=query.id)
+    judgements = Judgement.objects.filter(query=query.id, annotator=userAnnotator)
     judgement = Judgement.objects.filter(
-        query=query.id, document=document.id)[0]
+        query=query.id, document=document.id, annotator=userAnnotator)[0]
     rank = -1
     for (count, j) in enumerate(judgements):
         if j.id == judgement.id:
-            rank = count+1
+            rank = count + 1
             break
 
     prev = None
     try:
-        prev = Judgement.objects.filter(query=query.id).get(id=judgement.id-1)
+        prev = Judgement.objects.filter(query=query.id, annotator=userAnnotator).get(id=judgement.id-1)
     except:
         pass
 
     next = None
     try:
-        next = Judgement.objects.filter(query=query.id).get(id=judgement.id+1)
+        next = Judgement.objects.filter(query=query.id, annotator=userAnnotator).get(id=judgement.id+1)
     except:
         pass
 
@@ -87,14 +97,15 @@ def document(request, qId, docId):
 
 @login_required
 def judge(request, qId, docId):
-    query = get_object_or_404(Query, qId=qId)
+    userAnnotator = User.objects.get(username=request.user)
+    query = get_object_or_404(Query, qId=qId, annotator=userAnnotator)
     document = get_object_or_404(Document, docId=docId)
     relevance = request.POST['relevance']
     comment = request.POST['comment']
 
-    judgements = Judgement.objects.filter(query=query.id)
+    judgements = Judgement.objects.filter(query=query.id, annotator=userAnnotator)
     judgement, created = Judgement.objects.get_or_create(
-        query=query.id, document=document.id)
+        query=query.id, document=document.id, annotator=userAnnotator)
 
     judgement.relevance = int(relevance)
     if comment != 'Comment':
@@ -106,19 +117,19 @@ def judge(request, qId, docId):
     next = None
     try:
         next = Judgement.objects.filter(
-            query=query.id, annotator=annotator).get(id=judgement.id+1)
+            query=query.id, annotator=userAnnotator).get(id=judgement.id+1)
         if 'next' in request.POST:
             document = next.document
             judgement = next
             next = Judgement.objects.filter(
-                query=query.id, annotator=annotator).get(id=judgement.id+1)
+                query=query.id, annotator=userAnnotator).get(id=judgement.id+1)
     except:
         pass
 
     prev = None
     try:
         prev = Judgement.objects.filter(
-            query=query.id, annotator=annotator).get(id=judgement.id-1)
+            query=query.id, annotator=userAnnotator).get(id=judgement.id-1)
     except:
         pass
 
@@ -139,43 +150,51 @@ def judge(request, qId, docId):
 
 
 @login_required
+@permission_required('judgementapp.can_upload_docs')
 def upload(request):
     context = {}
     if 'queryFile' in request.FILES:
         f = request.FILES['queryFile']
 
-        qryCount = 0
+        qryCountPerUser = defaultdict(int)
         for query in f:
-            qid, txt = query.split("\t", 1)
-            qryCount = qryCount + 1
+            qid, user, txt = query.split(",", 2)
+            # checking if user exists
+            userAnnotator = User.objects.get(username=user)
+            qryCountPerUser[user] += 1
             query = Query(qId=qid, text=txt)
+            query.annotator = userAnnotator
             query.save()
-        context['queries'] = qryCount
+        context['queries'] = dict(qryCountPerUser)
 
     if 'resultsFile' in request.FILES:
         f = request.FILES['resultsFile']
 
-        docCount = 0
+        docCountPerUser = defaultdict(int)
         for result in f:
-            qid, _, doc, _, _, _ = result.split()
-            # qid, z, doc, rank, score, desc = result.split()
-            docCount = docCount + 1
+            qid, doc, user = result.split(',')
             doc = doc.replace('corpus/', '')
+            user = user.strip()
+            docCountPerUser[user] += 1
 
             document, created = Document.objects.get_or_create(docId=doc)
             document.text = "TBA"
-            query = Query.objects.get(qId=qid)
+            userAnnotator = User.objects.get(username=user)
+            query = Query.objects.get(qId=qid, annotator=userAnnotator)
             document.save()
 
             judgement = Judgement()
             judgement.query = query
             judgement.document = document
-            judgement.annotator = request.user
+            # check user exists in the DB
+            # if not this, will throw an exception
+            userAnnotator = User.objects.get(username=user)
+            judgement.annotator = userAnnotator
             judgement.relevance = -1
 
             judgement.save()
 
-        context['results'] = docCount
+        context['results'] = dict(docCountPerUser)
 
     return render_to_response('judgementapp/upload.html', context, context_instance=RequestContext(request))
 

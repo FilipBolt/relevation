@@ -10,20 +10,24 @@
 
     {% if queries %}
       <div class="span12">
-        {{ queries }} queries processed succesfully.
+        {% for key, value in queries.items %}
+          <li> Uploaded {{value}} queries for user {{key}}</li> 
+        {% endfor %} 
       </div>
     {% endif %}
+
     {% if results %}
       <div class="span12">
-        {{ results }} document results processed succesfully.
+
+        {% for key, value in results.items %}
+          <li> Uploaded {{value}} document results for user {{key}}</li> 
+        {% endfor %} 
+
       </div>
     {% endif %}
     {% if not queries and not results %}
 
       <div class="span12">
-        
-
-
 
       <form class="form-horizontal" action="save" method="post" enctype="multipart/form-data">
           {% csrf_token %}

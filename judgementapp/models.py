@@ -21,8 +21,6 @@ class Document(models.Model):
             content = "Could not read file %s" % settings.DATA_DIR + "/" + self.docId
         return content
 
-    class Meta:
-        permissions = (("can_upload", "Can upload document"))
 
 class Query(models.Model):
     qId = models.IntegerField()
@@ -30,6 +28,8 @@ class Query(models.Model):
     text = models.CharField(max_length=250)
     difficulty = models.IntegerField(blank=True, null=True)
     comment = models.TextField(blank=True, null=True)
+
+    annotator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     instructions = models.TextField(blank=True, null=True)
     criteria = models.TextField(blank=True, null=True)
@@ -47,11 +47,14 @@ class Query(models.Model):
         return len(self.judgements())
 
     def judgements(self):
-        return Judgement.objects.filter(query=self.id)
+        return Judgement.objects.filter(query=self.id, annotator=self.annotator)
+
+    class Meta:
+        # primary key
+        unique_together = (('qId', 'annotator'),)
 
 
 class Judgement(models.Model):
-
     labels = {-1: 'Unjudged', 0: 'Not relevant',
               1: 'Somewhat relevant', 2: 'Highly relevant'}
 
