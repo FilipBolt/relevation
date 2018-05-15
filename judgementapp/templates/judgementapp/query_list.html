@@ -7,8 +7,7 @@
 	    <p></p>
     </div>
 
-	<div class="row">
-
+	<div class="row"> 
         <div class="span12">
         	<table class="table table-striped">
               <thead>
@@ -23,12 +22,12 @@
 
                 {% for query in queries %}
                   
-                <tr>
+                 <tr>
                     <td>{{ query.qId }} </td>
                     <td><a href="{% url 'judgementapp.views.query' qId=query.qId%}">{{ query.text }}</a></td>
                     <td>{{ query.num_judgements }}</td>
                     <td {% if query.num_unjudged_docs > 0 %} style="color: red" {% endif %}>{{ query.num_unjudged_docs }}</td>
-                  </tr>
+                 </tr>
                 {% endfor %}
                 
         

@@ -5,22 +5,22 @@ from django.core.urlresolvers import reverse
 from django.template import Context, loader, RequestContext
 from django.shortcuts import render_to_response, get_object_or_404
 from django.core.servers.basehttp import FileWrapper
-
+from django.contrib.auth import login, authenticate
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.conf import settings
 from judgementapp.models import *
 
+
+@login_required
 def index(request):
-    queries = Query.objects.order_by('qId')
-    output = ', '.join([q.text for q in queries])
+    return render_to_response('judgementapp/index.html', context_instance=RequestContext(request))
 
-    template = loader.get_template('judgementapp/index.html')
-    context = Context({
-        'queries': queries,
-    })
-    return HttpResponse(template.render(context))
 
+@login_required
 def qrels(request):
     judgements = Judgement.objects.exclude(relevance=-1)
-
 
     response = HttpResponse(judgements, mimetype='application/force-download')
     response['Content-Disposition'] = 'attachment; filename=qrels.txt'
@@ -29,11 +29,15 @@ def qrels(request):
     # You can also set any other required headers: Cache-Control, etc.
     return response
 
+
+@login_required
 def query_list(request):
     queries = Query.objects.order_by('qId')
 
-    return render_to_response('judgementapp/query_list.html', { 'queries': queries}, context_instance=RequestContext(request))
+    return render_to_response('judgementapp/query_list.html', {'queries': queries}, context_instance=RequestContext(request))
 
+
+@login_required
 def query(request, qId):
     query = Query.objects.get(qId=qId)
     judgements = Judgement.objects.filter(query=query.id)
@@ -46,22 +50,23 @@ def query(request, qId):
 
     query.length = len(query.text)
 
-    return render_to_response('judgementapp/query.html', {'query': query, 'judgements': judgements}, 
-        context_instance=RequestContext(request))
+    return render_to_response('judgementapp/query.html', {'query': query, 'judgements': judgements},
+                              context_instance=RequestContext(request))
 
 
+@login_required
 def document(request, qId, docId):
     document = Document.objects.get(docId=docId)
     query = Query.objects.get(qId=qId)
 
     judgements = Judgement.objects.filter(query=query.id)
-    judgement = Judgement.objects.filter(query=query.id, document=document.id)[0]
+    judgement = Judgement.objects.filter(
+        query=query.id, document=document.id)[0]
     rank = -1
     for (count, j) in enumerate(judgements):
         if j.id == judgement.id:
             rank = count+1
             break
-
 
     prev = None
     try:
@@ -77,9 +82,10 @@ def document(request, qId, docId):
 
     content = document.get_content()
 
-    return render_to_response('judgementapp/document.html', {'document': document, 'query': query, 'judgement': judgement, 
-        'next': next, 'prev': prev, 'rank': rank, 'total_rank': judgements.count(), 'content': content.strip()}, context_instance=RequestContext(request))
+    return render_to_response('judgementapp/document.html', {'document': document, 'query': query, 'judgement': judgement,
+                                                             'next': next, 'prev': prev, 'rank': rank, 'total_rank': judgements.count(), 'content': content.strip()}, context_instance=RequestContext(request))
 
+@login_required
 def judge(request, qId, docId):
     query = get_object_or_404(Query, qId=qId)
     document = get_object_or_404(Document, docId=docId)
@@ -87,27 +93,32 @@ def judge(request, qId, docId):
     comment = request.POST['comment']
 
     judgements = Judgement.objects.filter(query=query.id)
-    judgement, created = Judgement.objects.get_or_create(query=query.id, document=document.id)
+    judgement, created = Judgement.objects.get_or_create(
+        query=query.id, document=document.id)
+
     judgement.relevance = int(relevance)
     if comment != 'Comment':
         judgement.comment = comment
-    judgement.save()
 
-    
+    judgement.annotator = request.user
+    judgement.save()
 
     next = None
     try:
-        next = Judgement.objects.filter(query=query.id).get(id=judgement.id+1)
+        next = Judgement.objects.filter(
+            query=query.id, annotator=annotator).get(id=judgement.id+1)
         if 'next' in request.POST:
             document = next.document
             judgement = next
-            next = Judgement.objects.filter(query=query.id).get(id=judgement.id+1)
+            next = Judgement.objects.filter(
+                query=query.id, annotator=annotator).get(id=judgement.id+1)
     except:
         pass
 
     prev = None
     try:
-        prev = Judgement.objects.filter(query=query.id).get(id=judgement.id-1)
+        prev = Judgement.objects.filter(
+            query=query.id, annotator=annotator).get(id=judgement.id-1)
     except:
         pass
 
@@ -117,13 +128,17 @@ def judge(request, qId, docId):
             rank = count+1
             break
 
-
     content = document.get_content()
 
-    return render_to_response('judgementapp/document.html', {'document': document, 'query': query, 'judgement': judgement, 
-        'next': next, 'prev': prev, 'rank': rank, 'total_rank': judgements.count(), 'content': content.strip()}, context_instance=RequestContext(request))
+    return render_to_response('judgementapp/document.html', {
+        'document': document, 'query': query, 'judgement': judgement,
+        'next': next, 'prev': prev, 'rank': rank, 
+        'total_rank': judgements.count(), 
+        'content': content.strip()
+    }, context_instance=RequestContext(request))
 
 
+@login_required
 def upload(request):
     context = {}
     if 'queryFile' in request.FILES:
@@ -133,7 +148,7 @@ def upload(request):
         for query in f:
             qid, txt = query.split("\t", 1)
             qryCount = qryCount + 1
-            query = Query(qId=qid,text=txt)
+            query = Query(qId=qid, text=txt)
             query.save()
         context['queries'] = qryCount
 
@@ -142,30 +157,41 @@ def upload(request):
 
         docCount = 0
         for result in f:
-            qid, z, doc, rank, score, desc = result.split()
+            qid, _, doc, _, _, _ = result.split()
+            # qid, z, doc, rank, score, desc = result.split()
             docCount = docCount + 1
             doc = doc.replace('corpus/', '')
-            
+
             document, created = Document.objects.get_or_create(docId=doc)
             document.text = "TBA"
-
             query = Query.objects.get(qId=qid)
             document.save()
 
             judgement = Judgement()
             judgement.query = query
             judgement.document = document
+            judgement.annotator = request.user
             judgement.relevance = -1
-            
+
             judgement.save()
-                
+
         context['results'] = docCount
 
-    return render_to_response('judgementapp/upload.html', context)
+    return render_to_response('judgementapp/upload.html', context, context_instance=RequestContext(request))
 
 
-
-
-
-
-
+def login_user(request):
+    context = {}
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            username = form.cleaned_data.get('username')
+            raw_password = form.cleaned_data.get('password1')
+            user = authenticate(username=username, password=raw_password)
+            login(request, user)
+            return redirect('home')
+    else:
+        form = UserCreationForm()
+    context['form'] = form
+    return render_to_response('judgementapp/login.html', context)

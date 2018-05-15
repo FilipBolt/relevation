@@ -36,8 +36,13 @@
         <div class="container">
             <a class="brand" href="{% url 'judgementapp.views.index' %}">relevation</a>
             <ul class="nav">
+                {% if user.is_authenticated %}
                 <li><a href="{% url 'judgementapp.views.index' %}" class="">Home</a></li>
-                <li><a href="{% url 'judgementapp.views.index' %}upload">Setup</a></li>
+
+                {% if perms.judgementapp.can_upload_docs %}
+                <li><a href="{% url 'upload' %}">Setup</a></li>
+                {% endif %}
+
                 <li class="dropdown">
                     <ul class="dropdown-menu">
                         <li><a class="nav" href="?layout=vertical">Vertical</a></li>
@@ -49,6 +54,14 @@
                 </li>
                 <li><a href="{% url 'judgementapp.views.index' %}about">About</a></li>
                 <li><a href="{% url 'judgementapp.views.query_list' %}">Queries</a></li>
+                <li><a href="{% url 'logout' %}">Logout</a></li>
+
+                {% else %}
+
+                <li><a href="{% url 'login_user' %}">Login</a></li>
+
+                {% endif %}
+
             </ul>
         </div>
     </div>
@@ -68,12 +81,18 @@
         </div>
         <div class="span6" style="text-align:right">
             <p>
-                <a href="http://koopman.id.au">Bevan Koopman</a>
+                <a href="http://koopman.id.au">author: Bevan Koopman</a>
+                <br />
+                <a href="http://takelab.fer.hr"> adopted: TakeLab </a>
+                <br />
+                User logged in: {{ user.username }}
             </p>
         </div>
     </footer>
 
 </div> <!-- container -->
+
+
 
 </body>
 </html>
