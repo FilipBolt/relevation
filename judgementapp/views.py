@@ -91,9 +91,17 @@ def document(request, qId, docId):
         pass
 
     content = document.get_content()
-
-    return render_to_response('judgementapp/document.html', {'document': document, 'query': query, 'judgement': judgement,
-                                                             'next': next, 'prev': prev, 'rank': rank, 'total_rank': judgements.count(), 'content': content.strip()}, context_instance=RequestContext(request))
+    title = document.get_title()
+    return render_to_response(
+        'judgementapp/document.html',
+        {'document': document,
+         'query': query, 'judgement': judgement,
+         'next': next, 'prev': prev, 'rank': rank,
+         'total_rank': judgements.count(),
+         'content': content.strip(),
+         'title': title 
+        }, context_instance=RequestContext(request)
+    )
 
 @login_required
 def judge(request, qId, docId):

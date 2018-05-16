@@ -2,14 +2,9 @@
 
 {% block content %}
 
-    
-    
-
-
 	   <div class="well">
 
         <h2><span {% if query.length > 200 %} class="long" {% endif %}>{{ query.qId }} - {{ query.text }}</span> <a style="text-align: right;", href="{% url 'judgementapp.views.query' qId=query.qId %}" class="btn">Back to Query</a></h2>
-        
         
     </div>
 
@@ -21,7 +16,7 @@
       {% endif %}
       </div>
 
-      <div class="span6"><h3 style="text-align: center;">Document "{{ document.docId }}" ({{ rank }} / {{total_rank}}) </h3></div>
+      <div class="span6"><h3 style="text-align: center;">"{{ document.docId }}" ({{ rank }} / {{total_rank}}) </h3></div>
 
       <div class="span3" align="right">
       {% if next %}
@@ -35,9 +30,8 @@
 	<div class="row">
         
         <div class="span9", style="height:750px; position:relative; overflow-y: scroll;" id='content'>
-          <pre>{{ content }}</pre>
+          {{ content | safe }}
         </div>
-      
         
         <script>
           // $('div#content').mouseup(function() {
@@ -64,6 +58,7 @@
             textarea.value = textarea.value + '"' + getSelectedText() + '"';
           }
     </script>
+
 
         <div class="span3">
             <form class="form-inline" action="{% url 'judgementapp.views.judge' qId=query.qId docId=document.docId %}" method="post">
@@ -116,6 +111,8 @@
   
         
     </div>
-
+<script>
+includeHTML();
+</script>
 
 {% endblock %}

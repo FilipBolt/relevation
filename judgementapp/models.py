@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import User
+import xml.etree.ElementTree as ET
 
 # Create your models here.
 
@@ -12,14 +13,25 @@ class Document(models.Model):
     def __unicode__(self):
         return self.docId
 
+    def document_absolute_path(self):
+        return settings.DATA_DIR + "/" + self.docId
+
     def get_content(self):
         content = ""
+
         try:
-            with open(settings.DATA_DIR + "/" + self.docId) as f:
+            with open(self.document_absolute_path()) as f:
                 content = f.read()
         except Exception:
-            content = "Could not read file %s" % settings.DATA_DIR + "/" + self.docId
+            content = "Could not read file %s" % self.document_absolute_path()
         return content
+
+    def get_title(self):
+        title = ""
+        tree = ET.parse(self.document_absolute_path())
+        root = tree.getroot()
+        title = root.find('HEAD').find('TITLE').text
+        return title
 
 
 class Query(models.Model):
