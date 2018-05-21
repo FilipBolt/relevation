@@ -16,7 +16,6 @@ from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.models import User
 
 
-@login_required
 def index(request):
     return render_to_response('judgementapp/index.html', context_instance=RequestContext(request))
 
