@@ -1,9 +1,11 @@
+import logging
 from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import User
 import xml.etree.ElementTree as ET
 
-# Create your models here.
+
+logger = logging.getLogger(__name__)
 
 
 class Document(models.Model):
@@ -24,14 +26,24 @@ class Document(models.Model):
                 content = f.read()
         except Exception:
             content = "Could not read file %s" % self.document_absolute_path()
+            logger.error(content)
+
         return content
 
     def get_title(self):
         title = ""
-        tree = ET.parse(self.document_absolute_path())
-        root = tree.getroot()
-        title = root.find('HEAD').find('TITLE').text
-        return title
+
+        try:
+            with open(self.document_absolute_path()) as f:
+                content = f.read()
+        except Exception:
+            title = "Could not read file %s" % self.document_absolute_path()
+            logger.error(title)
+        else:
+            tree = ET.parse(self.document_absolute_path())
+            root = tree.getroot()
+            title = root.find('HEAD').find('TITLE').text
+            return title
 
 
 class Query(models.Model):
@@ -68,13 +80,14 @@ class Query(models.Model):
 
 class Judgement(models.Model):
     labels = {-1: 'Unjudged', 0: 'Not relevant',
-              1: 'Somewhat relevant', 2: 'Highly relevant'}
+              1: 'Somewhat relevant', 2: 'Relevant'}
 
     query = models.ForeignKey(Query)
     document = models.ForeignKey(Document)
 
     annotator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     comment = models.TextField(blank=True, null=True)
+    time = models.FloatField(blank=True, null=True)
 
     relevance = models.IntegerField()
 

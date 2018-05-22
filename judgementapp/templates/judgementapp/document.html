@@ -4,7 +4,7 @@
 
 	   <div class="well">
 
-        <h2><span {% if query.length > 200 %} class="long" {% endif %}>{{ query.qId }} - {{ query.text }}</span> <a style="text-align: right;", href="{% url 'judgementapp.views.query' qId=query.qId %}" class="btn">Back to Query</a></h2>
+        <h2><span {% if query.length > 200 %} class="long" {% endif %}>{{ query.qId }} - {{ query.text }}</span> <a style="text-align: right;", href="{% url 'judgementapp.views.query' qId=query.qId %}" class="btn">Back to Topic</a></h2>
         
     </div>
 
@@ -77,7 +77,7 @@
                     </label><br>
                     <label class="radio">
                      <input type="radio" name="relevance" id="relevance2" value="2" {% if judgement.relevance == 2 %} checked {% endif %}>
-                      Highly relevant
+                      Relevant
                     </label><br>
                     <label class="radio">
                       <input type="radio" name="relevance" id="relevance1" value="1" {% if judgement.relevance == 1 %} checked {% endif %}>

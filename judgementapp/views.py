@@ -1,4 +1,6 @@
-# Create your views here.
+import json
+import time
+import logging
 from collections import defaultdict
 import cStringIO as StringIO
 from django.http import HttpResponse, HttpResponseRedirect
@@ -14,6 +16,9 @@ from django.conf import settings
 from judgementapp.models import *
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.models import User
+
+
+logger = logging.getLogger(__name__)
 
 
 def index(request):
@@ -38,8 +43,8 @@ def query_list(request):
     annotator = User.objects.get(username=request.user)
     queries = Query.objects.filter(annotator=annotator).order_by('qId')
     return render_to_response(
-        'judgementapp/query_list.html', 
-        {'queries': queries}, 
+        'judgementapp/query_list.html',
+        {'queries': queries},
         context_instance=RequestContext(request)
     )
 
@@ -91,6 +96,17 @@ def document(request, qId, docId):
 
     content = document.get_content()
     title = document.get_title()
+
+    # we measure the start time of opening a document
+    document_open_dict = request.session.get('document_open_dict')
+    if not document_open_dict:
+        document_open_dict = {}
+    else:
+        document_open_dict = json.loads(document_open_dict)
+
+    document_open_dict[str(judgement.id)] = time.time()
+    request.session['document_open_dict'] = json.dumps(document_open_dict)
+
     return render_to_response(
         'judgementapp/document.html',
         {'document': document,
@@ -98,7 +114,7 @@ def document(request, qId, docId):
          'next': next, 'prev': prev, 'rank': rank,
          'total_rank': judgements.count(),
          'content': content.strip(),
-         'title': title 
+         'title': title
         }, context_instance=RequestContext(request)
     )
 
@@ -119,7 +135,18 @@ def judge(request, qId, docId):
         judgement.comment = comment
 
     judgement.annotator = request.user
-    judgement.save()
+
+    # set time to annotate
+    document_open_dict = json.loads(request.session.get('document_open_dict'))
+
+    start_time = document_open_dict.get(str(judgement.id))
+    if start_time:
+        judgement.time = time.time() - start_time
+    else:
+        judgement.time = 0.0
+
+    logger.info('Judged document {} with relevance {} and comment ( {} ) by user {} taking {} seconds'
+                .format(document.id, relevance, comment, request.user, judgement.time))
 
     next = None
     try:
@@ -150,8 +177,8 @@ def judge(request, qId, docId):
 
     return render_to_response('judgementapp/document.html', {
         'document': document, 'query': query, 'judgement': judgement,
-        'next': next, 'prev': prev, 'rank': rank, 
-        'total_rank': judgements.count(), 
+        'next': next, 'prev': prev, 'rank': rank,
+        'total_rank': judgements.count(),
         'content': content.strip()
     }, context_instance=RequestContext(request))
 
