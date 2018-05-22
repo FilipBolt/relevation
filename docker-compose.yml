@@ -1,0 +1,10 @@
+version: '2'
+services:
+  web:
+    build: .
+    ports:
+       - 8014:8000
+    volumes:
+       - ./:/app
+    restart: always
+
