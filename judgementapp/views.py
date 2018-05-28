@@ -25,6 +25,10 @@ def index(request):
     return render_to_response('judgementapp/index.html', context_instance=RequestContext(request))
 
 
+def about(request):
+    return render_to_response('judgementapp/about.html', context_instance=RequestContext(request))
+
+
 @login_required
 @permission_required('judgementapp.can_upload_docs')
 def qrels(request):
@@ -144,9 +148,10 @@ def judge(request, qId, docId):
         judgement.time = time.time() - start_time
     else:
         judgement.time = 0.0
+    judgement.save()
 
-    logger.info('Judged document {} with relevance {} and comment ( {} ) by user {} taking {} seconds'
-                .format(document.id, relevance, comment, request.user, judgement.time))
+    logger.info('Judged document {} with relevance {} by user {} taking {} seconds'
+                .format(document.id, relevance, request.user, judgement.time))
 
     next = None
     try:
