@@ -52,6 +52,8 @@ class Query(models.Model):
     text = models.CharField(max_length=250)
     difficulty = models.IntegerField(blank=True, null=True)
     comment = models.TextField(blank=True, null=True)
+    narrative = models.TextField(blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
 
     annotator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 

@@ -197,11 +197,11 @@ def upload(request):
 
         qryCountPerUser = defaultdict(int)
         for query in f:
-            qid, user, txt = query.split(",", 2)
+            qid, user, txt, description, narrative = query.split(",", 4)
             # checking if user exists
             userAnnotator = User.objects.get(username=user)
             qryCountPerUser[user] += 1
-            query = Query(qId=qid, text=txt)
+            query = Query(qId=qid, text=txt, narrative=narrative, description=description)
             query.annotator = userAnnotator
             query.save()
         context['queries'] = dict(qryCountPerUser)

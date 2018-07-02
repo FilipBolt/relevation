@@ -6,7 +6,12 @@
         <h2> <span {% if query.length > 200 %} class="long" {% endif %}>{{ query.qId }} - {{ query.text }}</span> <a style="text-align: right;", href="{% url 'judgementapp.views.query_list' %}" class="btn">Back to Topics</a></h2>
 	    <p></p>
     </div>
-
+  <h3> 
+    Topic desciption: {{ query.description}}
+  </h3>
+  <h4>
+    Topic narrative: {{query.narrative}}
+  </h4>
 	<div class="row">
 
         <div class="span12">
