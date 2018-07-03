@@ -16,6 +16,7 @@ from django.conf import settings
 from judgementapp.models import *
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.models import User
+from django.template.defaultfilters import linebreaks
 
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,9 @@ def query_list(request):
 def query(request, qId):
     userAnnotator=User.objects.get(username=request.user)
     query = Query.objects.get(qId=qId, annotator=userAnnotator)
+    narrative = query.narrative.encode('utf-8')
+    narrative = narrative.replace("\\n", "\n")
+    logger.info(repr(narrative))
     judgements = Judgement.objects.filter(query=query.id, annotator=userAnnotator)
 
     if "difficulty" in request.POST:
@@ -67,8 +71,8 @@ def query(request, qId):
 
     query.length = len(query.text)
 
-    return render_to_response('judgementapp/query.html', {'query': query, 'judgements': judgements},
-                              context_instance=RequestContext(request))
+    return render_to_response('judgementapp/query.html', {
+	'query': query, 'judgements': judgements, 'narrative': narrative}, context_instance=RequestContext(request))
 
 
 @login_required
