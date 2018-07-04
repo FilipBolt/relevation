@@ -95,15 +95,16 @@
                     <label>Comment:</label>
                     <div class="controls">
                       <textarea rows="10" class="span3", id="comment" name="comment">{% if judgement.comment %}{{ judgement.comment }}{% else %}{% endif %}</textarea>
-                      <button type="button" class="btn btn-link" id="capture" onclick="captureSelection()">Insert Selected Text</button>
+                      
+                      <!-- feature disabled to insert selected text --!>
+                      <!-- <button type="button" class="btn btn-link" id="capture" onclick="captureSelection()">Insert Selected Text</button> --!>
+                      
                     </div>
                   </div>
                 
 
                 <div class="form-actions">
-
                     <button type="submit" class="btn btn-primary" size="20">Save</button> {% if next %} <button type="submit" name="next", class="btn btn-primary" size="20">Save & Next</button> {% endif %}
-                    
                 </div>
 
             </form>

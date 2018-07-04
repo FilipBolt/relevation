@@ -182,12 +182,13 @@ def judge(request, qId, docId):
             break
 
     content = document.get_content()
+    title = document.get_title()
 
     return render_to_response('judgementapp/document.html', {
         'document': document, 'query': query, 'judgement': judgement,
         'next': next, 'prev': prev, 'rank': rank,
         'total_rank': judgements.count(),
-        'content': content.strip()
+        'content': content.strip(), 'title': title
     }, context_instance=RequestContext(request))
 
 
