@@ -46,7 +46,7 @@ def qrels(request):
 @login_required
 def query_list(request):
     annotator = User.objects.get(username=request.user)
-    queries = Query.objects.filter(annotator=annotator).order_by('qId')
+    queries = Query.objects.filter(annotator=annotator)
     return render_to_response(
         'judgementapp/query_list.html',
         {'queries': queries},
@@ -60,7 +60,6 @@ def query(request, qId):
     query = Query.objects.get(qId=qId, annotator=userAnnotator)
     narrative = query.narrative.encode('utf-8')
     narrative = narrative.replace("\\n", "\n")
-    logger.info(repr(narrative))
     judgements = Judgement.objects.filter(query=query.id, annotator=userAnnotator)
 
     if "difficulty" in request.POST:
