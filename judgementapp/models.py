@@ -42,8 +42,11 @@ class Document(models.Model):
         else:
             tree = ET.parse(self.document_absolute_path())
             root = tree.getroot()
-            title = root.find('HEAD').find('TITLE').text
-            return title
+            try:
+                title = root.find('HEAD').find('TITLE')
+            except AttributeError:
+                title = root.find('docData').find('html').find('head').find('title')
+            return title.text
 
 
 class Query(models.Model):

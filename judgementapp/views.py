@@ -153,8 +153,8 @@ def judge(request, qId, docId):
         judgement.time = 0.0
     judgement.save()
 
-    logger.info('Judged document {} with relevance {} by user {} taking {} seconds'
-                .format(document.id, relevance, request.user, judgement.time))
+    logger.info('Judged document:{} for topic:{} with relevance:{} by user:{} taking {} seconds'
+                .format(document.docId, query.qId, relevance, request.user, judgement.time))
 
     next = None
     try:
